@@ -22,7 +22,7 @@ li{margin:2px 0}ul{padding-left:20px;margin:6px 0}
 </style></head><body><div id="app"></div>
 <script>
 const RN={wolf:'人狼',seer:'占い師',villager:'村人',citizen:'市民'};
-let ws,uid,name='',err='',view='name',S=null;
+let ws,uid,name='',err='',view='name',S=null,draft='';
 try{uid=localStorage.getItem('uid');name=localStorage.getItem('name')||''}catch(e){}
 if(!uid){uid='u'+Math.random().toString(36).slice(2,10);try{localStorage.setItem('uid',uid)}catch(e){}}
 const $=s=>document.getElementById(s);
@@ -46,7 +46,14 @@ function targets(){
   return S.players.filter(p=>!p.dead&&p.uid!==S.me).map(p=>
     `<button class="t ${S.target===p.uid?'on':''}" onclick="aim('${p.uid}')">${esc(p.name)}${S.target===p.uid?'　✔':''}</button>`).join('');
 }
+function sendChat(){const t=draft.trim();if(!t)return;send({t:'chat',text:t});draft='';const ci=$('ci');if(ci){ci.value='';ci.focus()}}
 function render(){
+  const el=document.activeElement,f=el&&el.id==='ci',pos=f?el.selectionStart:0;
+  draw();
+  const ci=$('ci');if(ci&&f){ci.focus();try{ci.setSelectionRange(pos,pos)}catch(e){}}
+  const cl=$('cl');if(cl)cl.scrollTop=cl.scrollHeight;
+}
+function draw(){
   const a=$('app');
   if(view==='name'){
     a.innerHTML=`<div style="text-align:center;padding:40px 0 20px"><div style="font-size:72px">🐺🌙</div>
@@ -98,6 +105,9 @@ function render(){
       if(S.host)h+=`<button onclick="send({t:'lobby'})">ロビーに戻る</button>`;
     }
   }
+  const muted=S.phase==='play'&&(me.dead||(S.mode==='wolf'&&S.sub==='night'));
+  h+=`<div class="card"><b>チャット</b><div id="cl" style="max-height:200px;overflow:auto;margin:6px 0">${(S.chat||[]).map(c=>`<div><span class="mu">${esc(c.name)}</span>　${esc(c.text)}</div>`).join('')||'<div class="mu">まだ発言はありません</div>'}</div>
+  ${muted?'<div class="mu">今は発言できません</div>':`<input id="ci" value="${esc(draft)}" maxlength="200" placeholder="メッセージを入力" oninput="draft=this.value" onkeydown="if(event.key==='Enter')sendChat()"><button onclick="sendChat()">送信</button>`}</div>`;
   h+=`<div class="err">${esc(err)}</div><button class="sub" onclick="send({t:'leave'})">部屋から出る</button>`;
   a.innerHTML=h;
 }
